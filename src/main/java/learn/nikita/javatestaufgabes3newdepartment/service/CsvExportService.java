@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -25,14 +26,22 @@ public class CsvExportService {
     private final AuftragRepository auftragRepository;
     private final S3UploadService s3UploadService;
 
-    private static final Path EXPORT_DIR = Path.of("exports");
-    private static final Path STATE_FILE = EXPORT_DIR.resolve("last_exported_id.id");
+    @Value("${export.dir:exports}")
+    private String exportDirProperty;
+
+    private Path exportDir() {
+        return Path.of(exportDirProperty);
+    }
+
+    private Path stateFile() {
+        return exportDir().resolve("last_exported_id.id");
+    }
 
     //every 3 hours
     @Scheduled(cron = "0 0 */3 * * *")
     @Transactional(readOnly = true)
     public void exportNewAuftrageToCsv() throws IOException {
-        Files.createDirectories(EXPORT_DIR);
+        Files.createDirectories(exportDir());
 
         Long lastExportedId = readLastExportedId();
 
@@ -74,11 +83,11 @@ public class CsvExportService {
     }
 
     private Long readLastExportedId() throws IOException {
-        if (!Files.exists(STATE_FILE)) {
+        if (!Files.exists(stateFile())) {
             return 0L;
         }
 
-        String content = Files.readString(STATE_FILE).trim();
+        String content = Files.readString(stateFile()).trim();
 
         if(content.isEmpty()) {
             return 0L;
@@ -91,7 +100,7 @@ public class CsvExportService {
         String timestamp = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
 
-        return EXPORT_DIR.resolve("auftrage_" + timestamp + ".csv");
+        return exportDir().resolve("auftrage_" + timestamp + ".csv");
     }
 
     private void writeLine(Path file, String line) throws IOException{
@@ -113,7 +122,7 @@ public class CsvExportService {
 
     private void saveLastExportedId(Long id) throws IOException {
         Files.writeString(
-                STATE_FILE,
+                stateFile(),
                 String.valueOf(id),
                 StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING

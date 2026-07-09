@@ -157,6 +157,40 @@ mvn -U clean install
 mvn spring-boot:run
 ```
 
+## Docker
+
+The application can be run together with PostgreSQL using Docker Compose.
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- `postgres` — PostgreSQL 16 database (`KundenDB`)
+- `app` — the Spring Boot application, built from the local `Dockerfile`
+
+The `app` container reads its configuration from `.env` (see [Configuration](#configuration)) and mounts the local `exports/` directory, so generated CSV files stay available on the host.
+
+To stop:
+
+```bash
+docker compose down
+```
+
+## Tests
+
+Run the test suite:
+
+```bash
+mvn test
+```
+
+Tests do not require a running PostgreSQL instance, Docker, or real AWS credentials:
+
+- `src/test/resources/application.yaml` overrides the datasource with an in-memory H2 database and provides dummy AWS S3 config values, so the Spring context loads in isolation.
+- `CsvExportService`, `S3UploadService`, and `DataGenerator` are covered by unit tests (JUnit 5 + Mockito) with mocked repositories and a mocked `S3Client`.
+
 ## Notes
 
 - CSV export runs every 3 hours.
