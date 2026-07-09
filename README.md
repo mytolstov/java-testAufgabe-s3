@@ -1,8 +1,10 @@
-# Java Test Task S3 New Department
+# Java Test Task S3
 
 ## Description
 
-Spring Boot application that regularly generates random customer and order data and saves it into PostgreSQL.
+Spring Boot application that reads new customer order data from PostgreSQL, exports it as CSV files every 3 hours, and uploads the generated CSV files to AWS S3.
+
+The application stores the last exported order ID to avoid exporting the same records multiple times.
 
 ## Technologies
 
@@ -12,33 +14,153 @@ Spring Boot application that regularly generates random customer and order data 
 - PostgreSQL
 - Lombok
 - Scheduler
+- AWS S3
+- AWS SDK for Java
 
 ## Database
 
 PostgreSQL database:
-        - KundenDB
+
+- KundenDB
 
 ### Tables
+
 - kunde
 - auftrage
- 
+
 ### Relations
-auftrage.kunde_id → kunde.kunde_id
 
-Kunde 1 -(has)- mc Auftage
+```text
+auftrage.kunde_id -> kunde.kunde_id
+```
 
-## Configuration 
+```text
+Kunde 1  --has--  many Auftrage
+```
 
-- Database credentials are stored in .env
+## CSV Export
+
+The application exports only new records.
+
+Export logic:
+
+```text
+1. Read last exported Auftrag ID
+2. Find all Auftrage with ID greater than last exported ID
+3. Create a new CSV file
+4. Upload the CSV file to AWS S3
+5. Save the newest exported Auftrag ID
+```
+
+CSV files are created locally in:
+
+```text
+exports/
+```
+
+Example file name:
+
+```text
+auftrage_2026-07-09_12-00-00.csv
+```
+
+The last exported ID is stored in:
+
+```text
+exports/last_exported_id.id
+```
+
+## AWS S3
+
+Generated CSV files are uploaded to AWS S3.
+
+Example S3 path:
+
+```text
+s3://your-bucket-name/exports/auftrage_2026-07-09_12-00-00.csv
+```
+
+The S3 bucket should stay private.
+
+The application uses an IAM user with upload permissions.
+
+Required upload permission:
+
+```text
+s3:PutObject
+```
+
+## Partner Access
+
+The partner receives a separate AWS IAM user with read-only access.
+
+Required read permissions:
+
+```text
+s3:ListBucket
+s3:GetObject
+```
+
+The partner can access the exported CSV files through AWS Console:
+
+```text
+1. Log in to AWS Console
+2. Open S3
+3. Open the bucket
+4. Open the exports folder
+5. Download CSV files
+```
+
+The partner does not need AWS access keys if they download files through the AWS Console.
+
+## Configuration
+
+Database and AWS credentials are stored in `.env`.
+
+Create a `.env` file as in `.env.example`.
+
+Example:
+
+```env
+DB_URL=jdbc:postgresql://localhost:5432/KundenDB
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=eu-north-1
+AWS_S3_BUCKET=your-bucket-name
+AWS_S3_PREFIX=exports
+```
+
+Important:
+
+```text
+.env must not be committed to GitHub.
+```
+
+Add this to `.gitignore`:
+
+```gitignore
+.env
+exports/
+```
 
 ## Run from terminal
-
-- create .env file as in .env.example
 
 ```bash
 set -a
 source .env
 set +a
+
 mvn -U clean install
 mvn spring-boot:run
 ```
+
+## Notes
+
+- CSV export runs every 3 hours.
+- Only new records are exported.
+- Existing records are not exported again.
+- AWS credentials are used only from environment variables.
+- The S3 bucket should not be public.

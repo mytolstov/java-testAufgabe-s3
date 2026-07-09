@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: kunden-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: KundenDB
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - csv-net
+
+  app:
+    build: .
+    container_name: csv-s3-export-app
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/KundenDB
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_S3_PREFIX: ${AWS_S3_PREFIX:-exports}
+    volumes:
+      - ./exports:/app/exports
+    networks:
+      - csv-net
+
+volumes:
+  postgres_data:
+
+networks:
+  csv-net:
