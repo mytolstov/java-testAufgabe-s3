@@ -35,8 +35,10 @@ Kunde 1 -(has)- mc Auftage
 
 - create .env file as in .env.example
 
+```bash
 set -a
 source .env
 set +a
 mvn -U clean install
 mvn spring-boot:run
+```
