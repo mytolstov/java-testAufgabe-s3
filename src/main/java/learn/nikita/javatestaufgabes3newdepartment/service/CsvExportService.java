@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class CsvExportService {
 
     private final AuftragRepository auftragRepository;
+    private final S3UploadService s3UploadService;
 
     private static final Path EXPORT_DIR = Path.of("exports");
     private static final Path STATE_FILE = EXPORT_DIR.resolve("last_exported_id.id");
@@ -63,6 +64,8 @@ public class CsvExportService {
 
             writeLine(csvFile, line);
         }
+
+        s3UploadService.uploadCsv(csvFile);
 
         Long newestExportedId = newAuftrage.get(newAuftrage.size() - 1).getAuftragId();
         saveLastExportedId(newestExportedId);
