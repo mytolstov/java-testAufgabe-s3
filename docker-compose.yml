@@ -32,6 +32,8 @@ services:
       AWS_REGION: ${AWS_REGION}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       AWS_S3_PREFIX: ${AWS_S3_PREFIX:-exports}
+      TZ: Europe/Berlin
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=Europe/Berlin"
     volumes:
       - ./exports:/app/exports
     networks:
